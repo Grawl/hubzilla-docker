@@ -1,0 +1,72 @@
+version: '2'
+
+volumes:
+  db:
+  hubzilla:
+
+networks:
+  web:
+    external: true
+  internal:
+    external: false
+
+services:
+  traefik:
+    image: traefik:latest
+    restart: always
+    ports:
+      - 80:80
+      - 443:443
+    networks:
+      - web
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /opt/traefik/traefik.toml:/traefik.toml
+      - /opt/traefik/acme.json:/acme.json
+    container_name: traefik
+  db:
+    container_name: hubzilladb
+    environment:
+      MYSQL_ROOT_PASSWORD: "password"
+      MYSQL_DATABASE: "hubzilla"
+      MYSQL_USER: "hubzilla"
+      MYSQL_PASSWORD: "hubzilla"
+    image: mariadb
+    restart: always
+    volumes:
+      - db:/var/lib/mysql
+    networks:
+      - internal
+  app:
+    container_name: hubzilla
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        DOMAIN: "{{HUB_DOMAIN}}"
+        SMTP_EMAIL: "{{SMTP_EMAIL}}"
+        SMTP_SERVER: "{{SMTP_SERVER}}"
+        SMTP_PORT: {{SMTP_PORT}}
+        SMTP_USER: "{{SMTP_USER}}"
+        SMTP_PASS: "{{SMTP_PASS}}"
+        ADMIN_EMAIL: "{{HUB_ADMIN_EMAIL}}"
+    image: hubzilla
+    restart: always
+    networks:
+      - web
+      - internal
+    volumes:
+      - hubzilla:/var/www/html
+    expose:
+      - "443"
+    depends_on:
+      - db
+    links:
+      - db
+    labels:
+      - "traefik.docker.network=web"
+      - "traefik.enable=true"
+      - "traefik.backend=app"
+      - "traefik.frontend.rule=Host:{{HUB_DOMAIN}}"
+      - "traefik.port=443"
+      - "traefik.protocol=https"
