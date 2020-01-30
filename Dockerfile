@@ -1,4 +1,4 @@
-FROM debian
+FROM debian:9.7
 ENV DEBIAN_FRONTEND noninteractive
 
 ARG DOMAIN
@@ -50,8 +50,7 @@ RUN LOCATION_HASH=$(cat /dev/urandom | tr -dc 'a-f0-9' | fold -w 64 | head -n 1)
     sed -i "s/{{LOCATION_HASH}}/$LOCATION_HASH/g" /var/www/html/.htconfig.php && \
     sed -i "s/{{ADMIN_EMAIL}}/$ADMIN_EMAIL/g" /var/www/html/.htconfig.php
 
-# TODO: Implement the cron job
-#RUN echo "*/15 * * * * cd /var/www/html; /usr/bin/php Zotlabs/Daemon/Master.php Cron" | crontab -u www-data -
+RUN echo "*/15 * * * * cd /var/www/html; /usr/bin/php Zotlabs/Daemon/Master.php Cron" | crontab -u www-data -
 
 # Run the startup script when the container is launched
 COPY src/start.sh /start.sh
